@@ -117,14 +117,32 @@ class ObserverClient:
         self._emit(message)
 
     def _emit(self, message: Any) -> None:
-        """Muestra el mensaje por salida estándar y lo agrega al archivo."""
+        """Muestra el JSON plano y la aclaración por pantalla, y guarda el JSON en el archivo."""
         text = json.dumps(message, ensure_ascii=False)
+
+        # 1. Muestra el JSON plano y la aclaración en la consola
         print(text, flush=True)
+        if isinstance(message, dict) and ("id" in message or "ID" in message):
+            record_id = message.get("id") or message.get("ID", "Desconocido")
+            print(
+                f"\n[OBSERVADOR] 🔔 Actualización en el registro ID: {record_id}",
+                flush=True,
+            )
+            print("  -> Datos actuales del registro:", flush=True)
+            for field, value in message.items():
+                if field not in {"id", "ID"}:
+                    print(f"     • {field}: {value}", flush=True)
+            print("-" * 40, flush=True)
+
+        # 2. Si no hay archivo configurado, retornamos
         if self.output is None:
             return
+
+        # 3. Escritura segura e inmediata en el archivo para que el test lo detecte al instante
         try:
             with self.output.open("a", encoding="utf-8") as handle:
                 handle.write(text + "\n")
+                handle.flush()
         except OSError as exc:
             print(f"Error: no se puede escribir {self.output}: {exc}", file=sys.stderr)
 
